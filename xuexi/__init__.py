@@ -23,8 +23,8 @@ from .unit import Timer, logger, caps, rules
 from .model import BankQuery
 
 class CONST:
-    CHALLENGE_COUNT_MIN = 15
-    CHALLENGE_COUNT_MAX = 30
+    CHALLENGE_COUNT_MIN = 20
+    CHALLENGE_COUNT_MAX = 40
     CHALLENGE_DELAY_MIN = 1
     CHALLENGE_DELAY_MAX = 8
 
@@ -38,7 +38,7 @@ class Automation():
             "unicodeKeyboard": caps["unicodekeyboard"],
             "resetKeyboard": caps["resetkeyboard"],
             "noReset": caps["noreset"],
-            # 'newCommandTimeout': 80,
+            'newCommandTimeout': 800,
             "deviceName": caps["devicename"],
             "uuid": caps["uuid"],
             "appPackage": caps["apppackage"],
@@ -99,9 +99,11 @@ class Automation():
 class App(Automation):
     def __init__(self):
         self.bq = BankQuery()
+        self.bank = None
         self._score = defaultdict(tuple)
         super().__init__()
-        time.sleep(5) # 启动动画居然有10秒钟也是过分了
+        self.driver.wait_activity('com.alibaba.android.rimet.biz.home.activity.HomeActivity', 20, 3)
+        # logger.error(self.driver.current_activity)
 
     def view_score(self):
         self.safe_click(rules['score_entry'])
@@ -127,10 +129,14 @@ class App(Automation):
         self.safe_back('quiz -> mine')
         self.safe_back('mine -> home')
 
-    def _search(self, content, options):
+    def _search(self, content, options, exclude=''):
         logger.debug(f'search [{content}] in baidu')
         content = re.sub(r'[\(（]出题单位.*', "", content)
-        logger.info(content)
+        # logger.info(content)
+        if options[-1].startswith("以上") and chr(len(options)+64) not in exclude:
+            logger.info(options)
+            logger.info(f'根据经验: {chr(len(options)+64)} 很可能是正确答案')
+            return len(options)-1
         url = quote('https://www.baidu.com/s?wd=' + content, safe=string.printable)
         headers = {
             'User-Agent': "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36"
@@ -142,46 +148,85 @@ class App(Automation):
             counts.append((count, i))
             logger.info(f'{i}. {option}: {count}')
         counts = sorted(counts, key=lambda x:x[0], reverse=True)
+        counts = [x for x in counts if x[1] not in exclude]
         c, i = counts[0]
-        logger.info(f'根据搜索结果: {i} 很可能是正确答案, 返回 {ord(i)-65}')
+        logger.info(f'根据搜索结果: {i} 很可能是正确答案')
         return ord(i)-65
 
     def _verify_answer(self, content, options):
         logger.info(content)
         # logger.info("\n".join(options))
-        bank = self.bq.get({
+        self.bank = self.bq.get({
             "category": "挑战题",
-            "content": content
+            "content": content,
+            "options": options
         })
-        if bank:
-            logger.info(f'提交正确答案 {bank["answer"]}')
-            return ord(bank["answer"])-65, True
-        return self._search(content, options), False
+        # logger.warning(self.bank)
+        if self.bank:
+            if '' != self.bank["answer"]:
+                logger.info(options)
+                logger.info(f'提交正确答案 {self.bank["answer"]}')
+                return ord(self.bank["answer"])-65
+            else:
+                logger.info(f'已知的排除项有: {self.bank["excludes"]}')
+                return self._search(content, options, self.bank["excludes"])
+        return self._search(content, options)
 
 
     def _challenge_cycle(self, num):
         self.safe_click(rules['challenge_entry'])
         while num:
+            self.bank = None
             content = self.wait.until(EC.presence_of_element_located((By.XPATH, rules['challenge_content']))).get_attribute("name")
             option_elements = self.wait.until(EC.presence_of_all_elements_located((By.XPATH, rules['challenge_options'])))
             options = [x.get_attribute("name") for x in option_elements]
             # print(content, options)
-            choose_index, flag = self._verify_answer(content, options) # <int>0~len(options)
+            choose_index = self._verify_answer(content, options) # <int>0~len(options)
+            challenge_delay = random.randint(CONST.CHALLENGE_DELAY_MIN, CONST.CHALLENGE_DELAY_MAX)
+            logger.info(f'随机延时 {challenge_delay} 秒...')
+            time.sleep(challenge_delay)
             option_elements[choose_index].click()            
             try:
                 time.sleep(2)
-                self.driver.find_element_by_xpath(rules['challenge_revival'])
-                # 找到了，说明答错，返回吧
-                logger.debug("很遗憾呢，请返回再接再厉……")
+                wrong = self.driver.find_element_by_xpath(rules['challenge_revival'])
+                # 找到了，说明答错，先把排除项推送了
+                logger.debug("很遗憾这题回答错误...")
+                self.bq.put({
+                    "category": "挑战题",
+                    "content": content,
+                    "options": options,
+                    "answer": "",
+                    "excludes": chr(65+choose_index),
+                    "notes": ""
+                })
+                # if "分享就能复活" == wrong.get_attribute("name"):
+                #     logger.debug("分享再来一局吧...")
+                #     wrong.click()
+                #     time.sleep(2)
+                # elif "再来一局" == wrong.get_attribute("name"):
+                #     logger.debug("很遗憾呢，请返回再接再厉……")
+                #     break
+                # else:
+                #     logger.debug("肯定出问题了！居然会来到我的位置？")
                 self.safe_back('challenge -> quiz')
                 break
             except:
                 # 没找到，回答正确，继续吧
                 num -= 1
                 logger.debug("回答正确，请继续你的表演……")
-                if not flag:
+                if not self.bank:
                     logger.debug(f'扩充题库...')
                     self.bq.post({
+                        "category": "挑战题",
+                        "content": content,
+                        "options": options,
+                        "answer": chr(65+choose_index),
+                        "excludes": "",
+                        "notes": ""
+                    })
+                elif self.bank and '' == self.bank['answer']:
+                    logger.debug(f'更新题库...')
+                    self.bq.put({
                         "category": "挑战题",
                         "content": content,
                         "options": options,
@@ -192,10 +237,6 @@ class App(Automation):
             if 0 == num:
                 logger.info(f'已达成指定题量，延时30秒安全退出！')
                 time.sleep(30)
-            else:
-                challenge_delay = random.randint(CONST.CHALLENGE_DELAY_MIN, CONST.CHALLENGE_DELAY_MAX)
-                logger.info(f'随机延时 {challenge_delay} 秒...')
-                time.sleep(challenge_delay)
 
         return num
 
@@ -210,9 +251,11 @@ class App(Automation):
         logger.info(f'本局挑战答题目标 {challenge_count} 题')
         while True:
             if 0 == self._challenge_cycle(challenge_count):
+                logger.info(f'已成功挑战 {challenge_count} 题，返回首页！')
                 break
             else:
                 logger.info(f'未完成{challenge_count}题，再来一局……')
+                time.sleep(5)
 
 
 

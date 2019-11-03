@@ -53,17 +53,41 @@ class BankQuery:
             'Content-Type': 'application/json;charset=UTF-8',
             'User-Agent': "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36"
         }
-        res = requests.post(url=self.url, headers=headers, json=item)
-        if 201 == res.status_code:
-            return True
-        return False
+        try:
+            res = requests.post(url=self.url, headers=headers, json=item)
+            if 201 == res.status_code:
+                return True
+        except:
+            return False
+
+    def put(self, item):
+        headers= {
+            'Content-Type': 'application/json;charset=UTF-8',
+            'User-Agent': "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36"
+        }
+        try:
+            res = requests.put(url=self.url, headers=headers, json=item)
+            if 201 == res.status_code:
+                logger.info('添加新记录')
+                return True
+            elif 201 == res.status_code:
+                logger.info('更新记录')
+                return True
+            else:
+                return False
+        except:
+            return False
 
     def get(self, item):
         logger.debug(f'Query {item["content"]}...')
         headers= {
             'User-Agent': "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36"
         }
-        res = requests.get(url=self.url, headers=headers, params=item)
-        if 200 == res.status_code:
-            return json.loads(res.text)
-        return None
+        try:
+            res = requests.get(url=self.url, headers=headers, json=item)
+            if 200 == res.status_code:
+                # logger.debug(res.text)
+                # logger.debug(json.loads(res.text))
+                return json.loads(res.text)
+        except:
+            return None
