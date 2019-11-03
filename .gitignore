@@ -103,8 +103,6 @@ venv.bak/
 # mypy
 .mypy_cache/
 项目依赖/
-xuexi/data-article.sqlite
-config-custom.ini
 *.log
 *.xml
 *.png
