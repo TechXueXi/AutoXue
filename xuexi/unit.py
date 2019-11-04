@@ -92,12 +92,18 @@ def create_logger(loggername:str='logger', levelname:str='DEBUG'):
 
 configs = dict(cfg._sections)
 caps = dict(configs['capability'])
+for key, value in caps.items():
+    if "true" == value.lower():
+        caps[key] = True
+    elif 'false' == value.lower():
+        caps[key] = False
+    else:
+        pass
+
 rules = dict(configs['rules'])
 logger = create_logger('xuexi')
 
 
 if __name__ == "__main__":
-    for section in cfg.sections():
-        print(section)
-        for option in cfg.options(section):
-            print(option, cfg.get(section, option))
+    for k,v in caps.items():
+        print(k,v)
