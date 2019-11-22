@@ -49,6 +49,10 @@ class BankQuery:
         self.url = cfg.get('api', 'url')
 
     def post(self, item):
+        if "" == item["content"]:
+            logger.debug(f'content is empty')
+            return False
+        logger.debug(f'POST {item["content"]} {item["options"]} {item["answer"]} {item["excludes"]}...')
         headers= {
             'Content-Type': 'application/json;charset=UTF-8',
             'User-Agent': "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36"
@@ -61,6 +65,10 @@ class BankQuery:
             return False
 
     def put(self, item):
+        if "" == item["content"]:
+            logger.debug(f'content is empty')
+            return False
+        logger.debug(f'PUT {item["content"]} {item["options"]} {item["answer"]} {item["excludes"]}...')
         headers= {
             'Content-Type': 'application/json;charset=UTF-8',
             'User-Agent': "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36"
@@ -79,7 +87,10 @@ class BankQuery:
             return False
 
     def get(self, item):
-        logger.debug(f'Query {item["content"]}...')
+        if "" == item["content"]:
+            logger.debug(f'content is empty')
+            return None
+        logger.debug(f'GET {item["content"]}...')
         headers= {
             'User-Agent': "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36"
         }

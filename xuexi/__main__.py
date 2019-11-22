@@ -13,4 +13,5 @@ from .unit import logger
 logger.debug(f'__MAIN__ running...')
 app = App()
 # app.view_score()
-app.quiz()
+# app.start()
+app.test()
