@@ -140,7 +140,7 @@ class App(Automation):
         self.safe_back('score -> home')
 
     def back_or_not(self, title):
-        return False
+        # return False
         g, t = self.score[title]
         if g == t:
             logger.debug(f'{title} 积分已达成，无需重复获取积分')
