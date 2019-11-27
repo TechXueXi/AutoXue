@@ -165,6 +165,10 @@ class App(Automation):
         counts = sorted(counts, key=lambda x:x[0], reverse=True)
         counts = [x for x in counts if x[1] not in exclude]
         c, i = counts[0]
+        if 0 == c:     
+            # 替换了百度引擎为搜狗引擎，结果全为零的机会应该会大幅降低       
+            _, i = random.choice(counts)
+            logger.info(f'搜索结果全0，随机一个 {i}')
         logger.info(f'根据搜索结果: {i} 很可能是正确答案')
         return i
 
