@@ -100,14 +100,14 @@ for key, value in caps.items():
     else:
         pass
 
-prefers = dict(configs['prefers'])
-for key, value in prefers.items():
-    if "true" == value.lower():
-        prefers[key] = True
-    elif 'false' == value.lower():
-        prefers[key] = False
-    else:
-        pass
+# prefers = dict(configs['prefers'])
+# for key, value in prefers.items():
+#     if "true" == value.lower():
+#         prefers[key] = True
+#     elif 'false' == value.lower():
+#         prefers[key] = False
+#     else:
+#         pass
 
 rules = dict(configs['rules'])
 logger = create_logger('xuexi')

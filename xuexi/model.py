@@ -47,38 +47,39 @@ class Bank(Structure):
 class BankQuery:
     def __init__(self):
         self.url = cfg.get('api', 'url')
+        self.headers = {
+            'Content-Type': 'application/json;charset=UTF-8',
+            'User-Agent': "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36"
+        }
 
-    def post(self, item):
+    def post(self, item, url=None):
+        if not url:
+            url = self.url
         if "" == item["content"]:
             logger.debug(f'content is empty')
             return False
         logger.debug(f'POST {item["content"]} {item["options"]} {item["answer"]} {item["excludes"]}...')
-        headers= {
-            'Content-Type': 'application/json;charset=UTF-8',
-            'User-Agent': "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36"
-        }
+        
         try:
-            res = requests.post(url=self.url, headers=headers, json=item)
+            res = requests.post(url=url, headers=self.headers, json=item)
             if 201 == res.status_code:
                 return True
         except:
             return False
 
-    def put(self, item):
+    def put(self, item, url=None):
+        if not url:
+            url = self.url
         if "" == item["content"]:
             logger.debug(f'content is empty')
             return False
         logger.debug(f'PUT {item["content"]} {item["options"]} {item["answer"]} {item["excludes"]}...')
-        headers= {
-            'Content-Type': 'application/json;charset=UTF-8',
-            'User-Agent': "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36"
-        }
         try:
-            res = requests.put(url=self.url, headers=headers, json=item)
+            res = requests.put(url=url, headers=self.headers, json=item)
             if 201 == res.status_code:
                 logger.info('添加新记录')
                 return True
-            elif 201 == res.status_code:
+            elif 200 == res.status_code:
                 logger.info('更新记录')
                 return True
             else:
@@ -86,17 +87,17 @@ class BankQuery:
         except:
             return False
 
-    def get(self, item):
+    def get(self, item, url=None):
+        if not url:
+            url = self.url
         if "" == item["content"]:
             logger.debug(f'content is empty')
             return None
         logger.debug(f'GET {item["content"]}...')
-        headers= {
-            'User-Agent': "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36"
-        }
         try:
-            res = requests.get(url=self.url, headers=headers, json=item)
+            res = requests.get(url=url, headers=self.headers, json=item)
             if 200 == res.status_code:
+                logger.debug(f'GET item success')
                 # logger.debug(res.text)
                 # logger.debug(json.loads(res.text))
                 return json.loads(res.text)
