@@ -98,6 +98,7 @@ class Automation():
         time.sleep(1)
 
     def safe_click(self, ele:str):
+        logger.debug(f'safe click {ele}')
         self.wait.until(EC.presence_of_element_located((By.XPATH, ele))).click()
         time.sleep(1)
 
