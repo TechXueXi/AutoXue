@@ -17,6 +17,7 @@ import subprocess
 from urllib.parse import quote
 from collections import defaultdict
 from appium import webdriver
+from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
@@ -91,6 +92,24 @@ class Automation():
                           self.size['height'] * random.uniform(0.75, 0.89), random.uniform(800, 1200))
         logger.debug('向左滑动屏幕')
 
+    def find_element(self, ele:str):
+        logger.debug(f'find elements by xpath: {ele}')
+        try:
+            element = self.driver.find_element_by_xpath(ele)
+        except NoSuchElementException as e:
+            logger.error(f'找不到元素: {ele}')
+            raise e
+        return element
+
+    def find_elements(self, ele:str):
+        logger.debug(f'find elements by xpath: {ele}')
+        try:
+            elements = self.driver.find_elements_by_xpath(ele)
+        except NoSuchElementException as e:
+            logger.error(f'找不到元素: {ele}')
+            raise e
+        return elements
+
     # 返回事件
     def safe_back(self, msg='default msg'):
         logger.debug(msg)
@@ -99,7 +118,9 @@ class Automation():
 
     def safe_click(self, ele:str):
         logger.debug(f'safe click {ele}')
-        self.wait.until(EC.presence_of_element_located((By.XPATH, ele))).click()
+        button = self.wait.until(EC.presence_of_element_located((By.XPATH, ele)))
+        # button = self.find_element(ele)
+        button.click()
         time.sleep(1)
 
     def __del__(self):
@@ -131,6 +152,7 @@ class App(Automation):
                 "视听学习时长", "每日答题", "每周答题", "专项答题", 
                 "挑战答题", "订阅", "收藏", "分享", "发表观点"]
         score_list = self.wait.until(EC.presence_of_all_elements_located((By.XPATH, rules['score_list'])))
+        # score_list = self.find_elements(rules["score_list"])
         for t, score in zip(titles, score_list):
             s = score.get_attribute("name")
             self.score[t] = tuple([int(x) for x in re.findall(r'\d+', s)])
@@ -218,11 +240,13 @@ class App(Automation):
 
     def _challenge_cycle(self, num):
         self.safe_click(rules['challenge_entry'])
-        while num:
+        while num:            
             content = self.wait.until(EC.presence_of_element_located(
                 (By.XPATH, rules['challenge_content']))).get_attribute("name")
+            # content = self.find_element(rules["challenge_content"]).get_attribute("name")
             option_elements = self.wait.until(EC.presence_of_all_elements_located(
                 (By.XPATH, rules['challenge_options'])))
+            # option_elements = self.find_elements(rules['challenge_options'])
             options = [x.get_attribute("name") for x in option_elements]
             length_of_options = len(options)
             logger.info(f'<{num}> {content}')
@@ -259,8 +283,10 @@ class App(Automation):
             logger.info(f'已完成指定题量, 本题故意答错后自动退出，否则延时30秒等待死亡')
             content = self.wait.until(EC.presence_of_element_located(
                 (By.XPATH, rules['challenge_content']))).get_attribute("name")
+            # content = self.find_elements(rules['challenge_content']).get_attribute("name")
             option_elements = self.wait.until(EC.presence_of_all_elements_located(
                 (By.XPATH, rules['challenge_options'])))
+            # option_elements = self.find_elements(rules['challenge_options'])
             options = [x.get_attribute("name") for x in option_elements]
             length_of_options = len(options)
             logger.info(f'<{num}> {content}')
@@ -330,13 +356,15 @@ class App(Automation):
 
     def _blank(self):
         contents = self.wait.until(EC.presence_of_all_elements_located((By.XPATH, rules["daily_blank_content"])))
+        # contents = self.find_elements(rules["daily_blank_content"])
         content = " ".join([x.get_attribute("name") for x in contents])
         blank_edits = self.wait.until(EC.presence_of_all_elements_located((By.XPATH, rules["daily_blank_edits"])))
+        # blank_edits = self.find_elements(rules["daily_blank_edits"])
         length_of_edits = len(blank_edits)
         logger.info(f'填空题 {content}')
         answer = self._verify("填空题", content, "") # 
         if not answer:
-            words = [''.join(random.sample(string.ascii_letters + string.digits, 8))] * length_of_edits
+            words = (''.join(random.sample(string.ascii_letters + string.digits, 8)) for i in range(length_of_edits))
         else:
             words = answer.split(" ")
         logger.debug(f'提交答案 {words}')
@@ -370,7 +398,9 @@ class App(Automation):
         
     def _radio(self):
         content = self.wait.until(EC.presence_of_element_located((By.XPATH, rules["daily_content"]))).get_attribute("name")
+        # content = self.find_element(rules["daily_content"]).get_attribute("name")
         option_elements = self.wait.until(EC.presence_of_all_elements_located((By.XPATH, rules["daily_options"])))
+        # option_elements = self.driver.find_elements(rules["daily_options"])
         options = [x.get_attribute("name") for x in option_elements]
         length_of_options = len(options)
         logger.info(f"单选题 {content}")
@@ -409,7 +439,9 @@ class App(Automation):
 
     def _check(self):
         content = self.wait.until(EC.presence_of_element_located((By.XPATH, rules["daily_content"]))).get_attribute("name")
+        # content = self.find_element(rules["daily_content"]).get_attribute("name")
         option_elements = self.wait.until(EC.presence_of_all_elements_located((By.XPATH, rules["daily_options"])))
+        # option_elements = self.driver.find_elements(rules["daily_options"])
         options = [x.get_attribute("name") for x in option_elements]
         length_of_options = len(options)
         logger.info(f"多选题 {content}\n{options}")
@@ -451,7 +483,10 @@ class App(Automation):
 
     def _dispath(self):
         for i in range(self.count_of_group):
-            category = self.wait.until(EC.presence_of_element_located((By.XPATH, rules["daily_category"]))).get_attribute("name")
+            try:
+                category = self.driver.find_element_by_xpath(rules["daily_category"]).get_attribute("name")
+            except:
+                logger.error(f'无法获取题目类型')
             if "填空题" == category:
                 self._blank()
             elif "单选题" == category:
@@ -471,6 +506,7 @@ class App(Automation):
             logger.info(f'每日答题 第 {num}# 组')
             self._dispath()
             score = self.wait.until(EC.presence_of_element_located((By.XPATH, rules["daily_score"]))).get_attribute("name")
+            # score = self.find_element(rules["daily_score"]).get_attribute("name")
             try:
                 score = int(score)
             except:
@@ -536,6 +572,7 @@ class App(Automation):
         logger.debug(f'哇塞，这么精彩的文章必须留个言再走！')
         self.safe_click(rules['article_comments'])
         edit_area = self.wait.until(EC.presence_of_element_located((By.XPATH, rules['article_comments_edit'])))
+        # edit_area = self.find_element(rules['article_comments_edit'])
         edit_area.send_keys(title)
         self.safe_click(rules['article_comments_publish'])
         time.sleep(2)
@@ -623,6 +660,7 @@ class App(Automation):
         vol_not_found = True
         while vol_not_found:
             volumns = self.wait.until(EC.presence_of_all_elements_located((By.XPATH, rules['article_volumn'])))
+            # volumns = self.find_elements(rules['article_volumn'])
             first_vol = volumns[1]
             for vol in volumns:
                 title = vol.get_attribute("name")
