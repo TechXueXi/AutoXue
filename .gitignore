@@ -107,4 +107,5 @@ venv.bak/
 *.xml
 *.png
 xuexi/custom.ini
+start_for_kessil.cmd
 使用帮助.html

@@ -8,13 +8,18 @@
 @time: 2019-10-26(星期六) 10:22
 @Copyright © 2019. All rights reserved.
 '''
-import random
+from argparse import ArgumentParser
 import time
 from . import App
 from .unit import logger
+from .secureRandom import SecureRandom as random
 
+parse = ArgumentParser(description="Accept username and password if necessary!")
 
-app = App()
+parse.add_argument("-u", "--username", metavar="username", type=str, default='', help='User Name')
+parse.add_argument("-p", "--password", metavar="password", type=str, default='', help='Pass Word')
+args = parse.parse_args()
+app = App(args.username, args.password)
 
 def shuffle(funcs):
     random.shuffle(funcs)

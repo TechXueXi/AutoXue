@@ -9,7 +9,6 @@
 @Copyright © 2019. All rights reserved.
 '''
 import re
-import random
 import time
 import requests
 import string
@@ -23,6 +22,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from .unit import Timer, logger, caps, rules, cfg
 from .model import BankQuery
+from .secureRandom import SecureRandom as random
 
 class Automation():
     # 初始化 Appium 基本参数
@@ -43,7 +43,7 @@ class Automation():
         }
         logger.info('打开 appium 服务,正在配置...')
         self.driver = webdriver.Remote('http://localhost:4723/wd/hub', self.desired_caps)
-        self.wait = WebDriverWait(self.driver, 10)
+        self.wait = WebDriverWait(self.driver, 15)
         self.size = self.driver.get_window_size()
 
     def connect(self):
@@ -129,7 +129,9 @@ class Automation():
 
 
 class App(Automation):
-    def __init__(self):
+    def __init__(self, username="", password=""):
+        self.username = username
+        self.password = password
         self.headers = {
             'User-Agent': "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36"
         }
@@ -138,12 +140,52 @@ class App(Automation):
         self.score = defaultdict(tuple)
 
         super().__init__()
+
+        self.login_or_not()
         self.driver.wait_activity('com.alibaba.android.rimet.biz.home.activity.HomeActivity', 20, 3)
         self.view_score()
         self._read_init()
         self._view_init()
         self._daily_init()
         self._challenge_init()
+
+    def login_or_not(self):
+        # com.alibaba.android.user.login.SignUpWithPwdActivity
+        time.sleep(10)
+        try:
+            home = self.driver.find_element_by_xpath(rules["home_entry"])
+            logger.debug(f'Do not have to login, perfect!')
+            return 
+        except NoSuchElementException as e:
+            logger.debug(self.driver.current_activity)
+            logger.debug(f"Not home page, login first!")
+        
+        if not self.username or not self.password:
+            logger.error(f'未提供有效的username和password')
+            logger.info(f'Maybe you need:')
+            logger.info(f'\tpython -m xuexi -u "your_username" -p "your_password"')
+            raise ValueError('username and password required')
+        
+        username = self.wait.until(EC.presence_of_element_located((
+            By.XPATH, rules["login_username"]
+        )))
+        password = self.wait.until(EC.presence_of_element_located((
+            By.XPATH, rules["login_password"]
+        )))
+        username.send_keys(self.username)
+        password.send_keys(self.password)
+        self.safe_click(rules["login_submit"])
+        try:
+            # time.sleep(3)
+            confirm = self.wait.until(EC.presence_of_element_located((
+                By.XPATH, rules["login_confirm"]
+            )))
+            confirm.click()
+        except NoSuchElementException as e:
+            logger.debug(f'貌似不需要点击同意')
+
+        
+        
 
 
     def view_score(self):
@@ -206,13 +248,40 @@ class App(Automation):
         if self.bank and self.bank["answer"]:
             logger.info(f'已知的正确答案: {self.bank["answer"]}')
             return self.bank["answer"]
+        # 查看提示
+        tips = self._view_tips()
+        logger.debug(f'Get tips {tips}')
         if "多选题" == category:
+            # if tips:
+            #     check_res = [letter for letter, option in zip(list("ABCDEFG"), options) if option in tips]
+            #     logger.debug(f'根据提示: {check_res}')
+            #     return "".join(check_res)
             return "ABCDEFG"[:len(options)]
         elif "填空题" == category:
+            # if tips:
+            #     blank_res = "".join(re.findall(r'.{0,2}\s+.{0,2}', content))
+            #     logger.debug(blank_res)
+            #     blank_res = re.sub(r'\s+', "(.*?)", blank_res)
+            #     logger.debug(blank_res)
+            #     blank_ans = re.findall(blank_res, tips)
+            #     logger.debug(f'根据提示 {blank_ans}')
+            #     if blank_res:
+            #         return "".join(blank_ans)
             return None # ''.join(random.sample(string.ascii_letters + string.digits, 8))
         else:
+
             if self.bank and self.bank["excludes"]:
                 logger.info(f'已知的排除项有: {self.bank["excludes"]}')
+                # if tips:
+                #     radio_res = ""
+                #     for letter, option in zip(list("ABCDEFG"), options):
+                #         if option in tips:
+                #             logger.debug(f'{option} in tips')
+                #             radio_res += letter
+                #     logger.debug(radio_res)
+                #     if 1 == len(radio_res) and radio_res not in self.bank["excludes"]:
+                #         logger.debug(f'根据提示 {radio_res}')
+                #         return radio_res
                 return self._search(content, options, self.bank["excludes"])
             return self._search(content, options)
 
@@ -328,6 +397,7 @@ class App(Automation):
             return
         self.safe_click(rules['mine_entry'])
         self.safe_click(rules['quiz_entry'])
+        time.sleep(3)
         self._challenge()
         self.safe_back('quiz -> mine')
         self.safe_back('mine -> home')
@@ -351,8 +421,38 @@ class App(Automation):
         self.delay_group_top = cfg.getint('prefers', 'daily_group_delay_max')
 
     def _submit(self):
+        time.sleep(10)
         self.safe_click(rules["daily_submit"])
         # time.sleep(random.randint(1,3))
+
+    def _view_tips(self):
+        content = ""
+        try:
+            tips_open = self.driver.find_element_by_xpath(rules["daily_tips_open"])
+            tips_open.click()
+        except NoSuchElementException as e:
+            logger.debug("没有可点击的【查看提示】按钮")
+            return ""
+
+        try:
+            tips = self.wait.until(EC.presence_of_element_located((
+                By.XPATH, rules["daily_tips"]
+            )))     
+            content = tips.get_attribute("name")
+            logger.debug(f'提示 {content}')
+        except NoSuchElementException as e:
+            logger.error(f'无法查看提示内容')
+            return ""
+
+        try:
+            tips_close = self.driver.find_element_by_xpath(rules["daily_tips_close"])
+            tips_close.click()
+        except NoSuchElementException as e:
+            logger.debug("没有可点击的【X】按钮")
+        
+        return content
+
+        
 
     def _blank(self):
         contents = self.wait.until(EC.presence_of_all_elements_located((By.XPATH, rules["daily_blank_content"])))
@@ -483,10 +583,12 @@ class App(Automation):
 
     def _dispath(self):
         for i in range(self.count_of_group):
+            logger.debug(f'每日答题 第 {4-i} 题')
             try:
                 category = self.driver.find_element_by_xpath(rules["daily_category"]).get_attribute("name")
-            except:
+            except NoSuchElementException as e:
                 logger.error(f'无法获取题目类型')
+                raise e
             if "填空题" == category:
                 self._blank()
             elif "单选题" == category:
@@ -533,6 +635,7 @@ class App(Automation):
             return
         self.safe_click(rules['mine_entry'])
         self.safe_click(rules['quiz_entry'])
+        time.sleep(3)
         self._daily(self.daily_count)
         self.safe_back('quiz -> mine')
         self.safe_back('mine -> home')
@@ -567,6 +670,7 @@ class App(Automation):
         # self.safe_click(rules['article_stars']) # 取消收藏
 
     def _comments_once(self, title="好好学习，天天强国"):
+        # return # 拒绝留言
         if self.back_or_not("发表观点"):
             return
         logger.debug(f'哇塞，这么精彩的文章必须留个言再走！')
@@ -723,9 +827,9 @@ class App(Automation):
 
     def _watch(self, video_count=None):
         if not video_count:
-            logger.info('视听学习已完成，无须重复学习')
+            logger.info('视听学习积分已达成，无须重复视听')
             return
-        logger.info("开始学习百灵视频...")
+        logger.info("开始浏览百灵视频...")
         self.safe_click(rules['bailing_enter'])
         self.safe_click(rules['bailing_enter']) # 再点一次刷新短视频列表
         self.safe_click(rules['video_first'])

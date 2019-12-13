@@ -7,7 +7,7 @@ if errorlevel 1 (
     echo could not start while Appium not running
     goto run
 ) else (
-    echo Appium is running
+    REM echo Appium is running
 )
 
 tasklist /nh|find /i "Nox.exe"
@@ -15,7 +15,7 @@ if errorlevel 1 (
     echo could not start while Nox not running
     goto finish
 ) else (
-    echo Nox is running
+    REM echo Nox is running
     goto run
 )
 

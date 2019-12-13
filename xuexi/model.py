@@ -83,6 +83,7 @@ class BankQuery:
                 logger.info('更新记录')
                 return True
             else:
+                logger.debug("PUT do nothing")
                 return False
         except:
             return False
@@ -101,5 +102,9 @@ class BankQuery:
                 # logger.debug(res.text)
                 # logger.debug(json.loads(res.text))
                 return json.loads(res.text)
+            else:
+                logger.debug(f'GET item failure')
+                return None
         except:
+            logger.debug('request faild')
             return None

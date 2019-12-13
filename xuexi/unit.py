@@ -57,7 +57,7 @@ cfg.read('./xuexi/default.ini', encoding='utf-8')
 cfg.read('./xuexi/custom.ini', encoding='utf-8')
 
 
-def create_logger(loggername:str='logger', levelname:str='DEBUG'):
+def create_logger(loggername:str='logger', levelname:str='DEBUG', console_levelname='INFO'):
     levels = {
         'DEBUG': logging.DEBUG,
         'INFO': logging.INFO,
@@ -74,7 +74,7 @@ def create_logger(loggername:str='logger', levelname:str='DEBUG'):
 
     handler_console = logging.StreamHandler()
     handler_console.setFormatter(console_format)
-    handler_console.setLevel(logging.INFO)
+    handler_console.setLevel(levels[console_levelname])
 
     path = Path(__file__).parent/'logs' # 日志目录
     path.mkdir(parents=True, exist_ok=True)
@@ -110,7 +110,7 @@ for key, value in caps.items():
 #         pass
 
 rules = dict(configs['rules'])
-logger = create_logger('xuexi')
+logger = create_logger('xuexi', console_levelname=cfg.get("prefers", "console_levelname"))
 
 
 if __name__ == "__main__":
