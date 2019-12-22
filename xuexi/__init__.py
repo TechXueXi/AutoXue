@@ -14,6 +14,7 @@ import requests
 import string
 import subprocess
 from urllib.parse import quote
+from itertools import accumulate
 from collections import defaultdict
 from appium import webdriver
 from selenium.common.exceptions import NoSuchElementException
@@ -213,6 +214,7 @@ class App(Automation):
         return False
 
     def _search(self, content, options, exclude=''):
+        # 职责 网上搜索
         logger.debug(f'搜索 {content} <exclude = {exclude}>')
         logger.info(f"选项 {options}")
         content = re.sub(r'[\(（]出题单位.*', "", content)
@@ -238,53 +240,71 @@ class App(Automation):
         return i
 
     def _verify(self, category, content, options):
-        logger.debug(f'{category} {content} {options}')
+        # 职责: 检索题库 查看提示
+        letters = list("ABCDEFGHIJKLMN")
         self.bank = self.query.get({
             "category": category,
             "content": content,
             "options": options
         })
-        # logger.info(options)
         if self.bank and self.bank["answer"]:
             logger.info(f'已知的正确答案: {self.bank["answer"]}')
             return self.bank["answer"]
-        # 查看提示
+        excludes = self.bank["excludes"] if self.bank else ""
         tips = self._view_tips()
-        logger.debug(f'Get tips {tips}')
-        if "多选题" == category:
-            # if tips:
-            #     check_res = [letter for letter, option in zip(list("ABCDEFG"), options) if option in tips]
-            #     logger.debug(f'根据提示: {check_res}')
-            #     return "".join(check_res)
-            return "ABCDEFG"[:len(options)]
-        elif "填空题" == category:
-            # if tips:
-            #     blank_res = "".join(re.findall(r'.{0,2}\s+.{0,2}', content))
-            #     logger.debug(blank_res)
-            #     blank_res = re.sub(r'\s+', "(.*?)", blank_res)
-            #     logger.debug(blank_res)
-            #     blank_ans = re.findall(blank_res, tips)
-            #     logger.debug(f'根据提示 {blank_ans}')
-            #     if blank_res:
-            #         return "".join(blank_ans)
-            return None # ''.join(random.sample(string.ascii_letters + string.digits, 8))
+        if not tips:
+            logger.debug("本题没有提示")
+            if "填空题" == category:
+                return None
+            elif "多选题" == category:
+                return "ABCDEFG"[:len(options)]
+            elif "单选题" == category:
+                return self._search(content, options, excludes)
+            else:
+                logger.debug("题目类型非法")            
         else:
+            if "填空题" == category:
+                dests = re.findall(r'.{0,2}\s+.{0,2}', content)
+                result = []
+                for dest in dests:
+                    logger.debug(dest)
+                    dest = re.sub(r'\s+', '(.+?)', dest)
+                    logger.debug(dest)
+                    res = re.findall(dest, tips)
+                    if len(res):
+                        result.append(res[0])
+                if len(result):
+                    logger.debug(result)
+                    return " ".join(result)
+                return None
+            elif "多选题" == category:
+                check_res = [letter for letter, option in zip(letters, options) if option in tips]
+                if len(check_res) > 1:
+                    logger.debug(f'根据提示，可选项有: {check_res}')
+                    return "".join(check_res)
+                return "ABCDEFG"[:len(options)]
+            elif "单选题" == category:
+                radio_in_tips, radio_out_tips = "", ""
+                for letter, option in zip(letters, options):
+                    if option in tips:
+                        logger.debug(f'{option} in tips')
+                        radio_in_tips += letter
+                    else:
+                        logger.debug(f'{option} out tips')
+                        radio_out_tips += letter
 
-            if self.bank and self.bank["excludes"]:
-                logger.info(f'已知的排除项有: {self.bank["excludes"]}')
-                # if tips:
-                #     radio_res = ""
-                #     for letter, option in zip(list("ABCDEFG"), options):
-                #         if option in tips:
-                #             logger.debug(f'{option} in tips')
-                #             radio_res += letter
-                #     logger.debug(radio_res)
-                #     if 1 == len(radio_res) and radio_res not in self.bank["excludes"]:
-                #         logger.debug(f'根据提示 {radio_res}')
-                #         return radio_res
-                return self._search(content, options, self.bank["excludes"])
-            return self._search(content, options)
+                logger.debug(f'含 {radio_in_tips} 不含 {radio_out_tips}')
+                if 1 == len(radio_in_tips) and radio_in_tips not in excludes:
+                    logger.debug(f'根据提示 {radio_in_tips}')
+                    return radio_in_tips
+                if 1 == len(radio_out_tips) and radio_out_tips not in excludes:
+                    logger.debug(f'根据提示 {radio_out_tips}')
+                    return radio_out_tips
+                return self._search(content, options, excludes)
+            else:
+                logger.debug("题目类型非法")
 
+        
     def _update_bank(self, item):
         if not self.bank or not self.bank["answer"]:
             self.query.put(item)
@@ -420,10 +440,13 @@ class App(Automation):
         self.delay_group_bot = cfg.getint('prefers', 'daily_group_delay_min')
         self.delay_group_top = cfg.getint('prefers', 'daily_group_delay_max')
 
-    def _submit(self):
-        time.sleep(10)
+    def _submit(self, delay=None):
+        if not delay:
+            delay = random.randint(self.delay_bot, self.delay_top)
+            logger.info(f'随机延时 {delay} 秒...')
+        time.sleep(delay)
         self.safe_click(rules["daily_submit"])
-        # time.sleep(random.randint(1,3))
+        time.sleep(random.randint(1,3))
 
     def _view_tips(self):
         content = ""
@@ -433,7 +456,7 @@ class App(Automation):
         except NoSuchElementException as e:
             logger.debug("没有可点击的【查看提示】按钮")
             return ""
-
+        time.sleep(2)
         try:
             tips = self.wait.until(EC.presence_of_element_located((
                 By.XPATH, rules["daily_tips"]
@@ -443,21 +466,45 @@ class App(Automation):
         except NoSuchElementException as e:
             logger.error(f'无法查看提示内容')
             return ""
-
+        time.sleep(2)
         try:
             tips_close = self.driver.find_element_by_xpath(rules["daily_tips_close"])
             tips_close.click()
+            
         except NoSuchElementException as e:
             logger.debug("没有可点击的【X】按钮")
-        
+        time.sleep(2)
         return content
 
-        
+    def _blank_answer_divide(self, ans:str, arr:list):
+        accu_revr = [x for x in accumulate(arr)]
+        print(accu_revr)
+        temp  = list(ans)
+        for c in accu_revr[-2::-1]:
+            temp.insert(c, " ")
+        return "".join(temp)        
 
     def _blank(self):
         contents = self.wait.until(EC.presence_of_all_elements_located((By.XPATH, rules["daily_blank_content"])))
         # contents = self.find_elements(rules["daily_blank_content"])
-        content = " ".join([x.get_attribute("name") for x in contents])
+        # content = " ".join([x.get_attribute("name") for x in contents])
+        # 下面一块代码可用列表生成式
+        content, spaces = "", []
+        for item in contents:
+            content_text = item.get_attribute("name")
+            if "" != content_text:
+                content += content_text
+            else:
+                length_of_spaces = len(item.find_elements(By.CLASS_NAME, "android.view.View"))-1
+                print(f'空格数 {length_of_spaces}')
+                spaces.append(length_of_spaces)
+                content += " " * (length_of_spaces)
+        # 请见识列表生成式的强大吧
+        # content = "".join([x.get_attribute("name") 
+        #                     if x.get_attribute("name") 
+        #                     else " "*(len(x.find_elements(By.CLASS_NAME, "android.view.View"))-1)
+        #                     for x in contents ])
+        
         blank_edits = self.wait.until(EC.presence_of_all_elements_located((By.XPATH, rules["daily_blank_edits"])))
         # blank_edits = self.find_elements(rules["daily_blank_edits"])
         length_of_edits = len(blank_edits)
@@ -480,7 +527,7 @@ class App(Automation):
             logger.info(f"答案 {answer}")
             notes = self.driver.find_element_by_xpath(rules["daily_notes"]).get_attribute("name")
             logger.debug(f"解析 {notes}")
-            self._submit()
+            self._submit(2)
             if 1 == length_of_edits:
                 self._update_bank({
                     "category": "填空题",
@@ -491,7 +538,15 @@ class App(Automation):
                     "notes": notes
                 })
             else:
-                logger.error("多位置的填空题待完善...")
+                logger.error("多位置的填空题待验证正确性")
+                self._update_bank({
+                    "category": "填空题",
+                    "content": content,
+                    "options": [""],
+                    "answer": self._blank_answer_divide(answer, spaces),
+                    "excludes": "",
+                    "notes": notes
+                })
         except:
             logger.debug("填空题回答正确")
 
@@ -518,7 +573,7 @@ class App(Automation):
             logger.info(f"答案 {right_answer}")
             # notes = self.driver.find_element_by_xpath(rules["daily_notes"]).get_attribute("name")
             # logger.debug(f"解析 {notes}")
-            self._submit()
+            self._submit(2)
             self._update_bank({
                 "category": "单选题",
                 "content": content,
@@ -562,7 +617,7 @@ class App(Automation):
             logger.info(f"答案 {right_answer}")
             # notes = self.driver.find_element_by_xpath(rules["daily_notes"]).get_attribute("name")
             # logger.debug(f"解析 {notes}")
-            self._submit()
+            self._submit(2)
             self._update_bank({
                 "category": "多选题",
                 "content": content,
@@ -597,9 +652,7 @@ class App(Automation):
                 self._check()
             else:
                 logger.error(f"未知的题目类型: {category}")
-            delay = random.randint(self.delay_bot, self.delay_top)
-            logger.debug(f'延时 {delay} 秒...')
-            time.sleep(delay)
+            
 
     def _daily(self, num):
         self.safe_click(rules["daily_entry"])
@@ -747,7 +800,7 @@ class App(Automation):
                         self._star_share_comments(title)
                         ssc_count -= 1
                     except:
-                        logger.debug('这是一篇关闭评论的文章，收藏分享留言过程出现错误')               
+                        logger.debug('这是一篇关闭评论的文章，收藏分享留言过程出现错误')
 
                 self.titles.append(title)
                 self.safe_back('article -> list')

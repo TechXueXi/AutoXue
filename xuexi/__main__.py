@@ -27,15 +27,23 @@ def shuffle(funcs):
         func()
         time.sleep(5)
 
-if random.random() > 0.5:
-    logger.debug(f'视听学习优先')
-    app.watch()
-    app.music()
-    shuffle([app.read, app.daily, app.challenge])
-else:
-    logger.debug(f'视听学习置后')
-    app.music()
-    shuffle([app.read, app.daily, app.challenge])
-    app.watch()
+def start():
+    if random.random() > 0.5:
+        logger.debug(f'视听学习优先')
+        app.watch()
+        app.music()
+        shuffle([app.read, app.daily, app.challenge])
+    else:
+        logger.debug(f'视听学习置后')
+        app.music()
+        shuffle([app.read, app.daily, app.challenge])
+        app.watch()
+    logger.info(f'大功告成，功成身退')
 
-logger.info(f'大功告成，功成身退')
+def test():
+    app.daily()
+    logger.info(f'测试完毕')
+
+if __name__ == "__main__":
+    start()
+    # test()
