@@ -186,7 +186,15 @@ class App(Automation):
             logger.debug(f'貌似不需要点击同意')
 
         
-        
+    def logout_or_not(self):
+        if cfg.getboolean("prefers", "keep_alive"):
+            logger.debug("无需自动注销账号")
+            return 
+        self.safe_click(rules["mine_entry"])
+        self.safe_click(rules["setting_submit"])
+        self.safe_click(rules["logout_submit"])
+        self.safe_click(rules["logout_confirm"])
+        logger.info("已注销")
 
 
     def view_score(self):

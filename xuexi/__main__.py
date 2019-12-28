@@ -38,6 +38,8 @@ def start():
         app.music()
         shuffle([app.read, app.daily, app.challenge])
         app.watch()
+    app.logout_or_not()
+    
     logger.info(f'大功告成，功成身退')
 
 def test():
