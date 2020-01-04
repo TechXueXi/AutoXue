@@ -785,6 +785,12 @@ class App(Automation):
                 title = article.get_attribute("name")
                 if title in self.titles:
                     continue
+                try:
+                    pic_num = article.parent.find_element_by_id("cn.xuexi.android:id/st_feeds_card_mask_pic_num")
+                    logger.debug(f'这绝对是摄影集，直接下一篇')
+                    continue
+                except:
+                    logger.debug(f'这篇文章应该不是摄影集了吧')
                 article.click()
                 num -= 1
                 logger.info(f'<{num}> 当前篇目 {title}')
