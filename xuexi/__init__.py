@@ -273,12 +273,14 @@ class App(Automation):
         else:
             if "填空题" == category:
                 dests = re.findall(r'.{0,2}\s+.{0,2}', content)
+                logger.debug(f'dests: {dests}')
                 result = []
                 for dest in dests:
                     logger.debug(dest)
                     dest = re.sub(r'\s+', '(.+?)', dest)
                     logger.debug(dest)
                     res = re.findall(dest, tips)
+                    logger.debug(f'res: {res}')
                     if len(res):
                         result.append(res[0])
                 if len(result):
@@ -435,12 +437,14 @@ class App(Automation):
     def _daily_init(self):
         # super().__init__()
         self.g, self.t = 0, 6
-        self.count_of_group = 5
+        self.count_of_each_group = 5
         try:
             self.daily_count = cfg.getint('prefers', 'daily_count')
+            self.daily_force = self.daily_count > 0
         except:
             self.g, self.t = self.score["每日答题"]
             self.daily_count = self.t - self.g
+            self.daily_force = False
 
         self.delay_bot = cfg.getint('prefers', 'daily_delay_min')
         self.delay_top = cfg.getint('prefers', 'daily_delay_max')
@@ -645,7 +649,7 @@ class App(Automation):
             })
 
     def _dispath(self):
-        for i in range(self.count_of_group):
+        for i in range(self.count_of_each_group):
             logger.debug(f'每日答题 第 {4-i} 题')
             try:
                 category = self.driver.find_element_by_xpath(rules["daily_category"]).get_attribute("name")
@@ -668,28 +672,35 @@ class App(Automation):
             num -= 1
             logger.info(f'每日答题 第 {num}# 组')
             self._dispath()
-            score = self.wait.until(EC.presence_of_element_located((By.XPATH, rules["daily_score"]))).get_attribute("name")
-            # score = self.find_element(rules["daily_score"]).get_attribute("name")
-            try:
-                score = int(score)
-            except:
-                raise TypeError('integer required')
-            self.g += score
-            if self.g == self.t:
-                logger.info(f"今日答题已完成，返回")
+            if not self.daily_force:
+                score = self.wait.until(EC.presence_of_element_located((By.XPATH, rules["daily_score"]))).get_attribute("name")
+                # score = self.find_element(rules["daily_score"]).get_attribute("name")
+                try:
+                    score = int(score)
+                except:
+                    raise TypeError('integer required')
+                self.g += score
+                if self.g == self.t:
+                    logger.info(f"今日答题已完成，返回")
+                    break
+            if num == 0:
+                logger.debug(f'今日循环结束 <{self.g} / {self.t}>')
                 break
-            else:
-                delay = random.randint(self.delay_group_bot, self.delay_group_top)
-                logger.info(f'每日答题未完成 <{self.g} / {self.t}> {delay} 秒后再来一组')
-                time.sleep(delay)
-                self.safe_click(rules['daily_again'])
-                continue
+            delay = random.randint(self.delay_group_bot, self.delay_group_top)
+            logger.info(f'每日答题未完成 <{self.g} / {self.t}> {delay} 秒后再来一组')
+            time.sleep(delay)
+            self.safe_click(rules['daily_again'])
+            continue
         else:
-            logger.debug(f'今日循环结束 <{self.g} / {self.t}>')
+            logger.debug("应该不会执行本行代码")
+
         self.safe_back('daily -> quiz')
-
-
-
+        try:
+            back_confirm = self.driver.find_element_by_xpath(rules["daily_back_confirm"])
+            back_confirm.click()
+        except:
+            logger.debug(f"无需点击确认退出")
+    
     def daily(self):
         if 0 == self.daily_count:
             logger.info(f'每日答题积分已达成，无需重复答题')
