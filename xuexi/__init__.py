@@ -202,7 +202,7 @@ class App(Automation):
         self.safe_click(rules['score_entry'])
         titles = ["登录", "阅读文章", "视听学习", "文章学习时长", 
                 "视听学习时长", "每日答题", "每周答题", "专项答题", 
-                "挑战答题", "订阅", "收藏", "分享", "发表观点"]
+                "挑战答题", "订阅", "收藏", "分享", "发表观点", "本地频道"]
         score_list = self.wait.until(EC.presence_of_all_elements_located((By.XPATH, rules['score_list'])))
         # score_list = self.find_elements(rules["score_list"])
         for t, score in zip(titles, score_list):
@@ -835,11 +835,28 @@ class App(Automation):
             else:
                 self.swipe_up()
     
+    def _kaleidoscope(self):
+        ''' 本地频道积分 +1 '''
+        if self.back_or_not("本地频道"):
+            return 
+        volumns = self.wait.until(EC.presence_of_all_elements_located((By.XPATH, rules['article_volumn'])))
+        volumns[3].click()
+        time.sleep(5)
+        self.safe_click(rules['article_kaleidoscope'])
+        delay = random.randint(5, 15)
+        logger.info(f"在本地学习平台驻足 {delay} 秒")
+        time.sleep(delay)
+        self.safe_back('学习平台 -> 文章列表')
+
+
+
+
     def read(self):
         if 0 == self.read_count:
             logger.info(f'新闻阅读已达成，无需重复阅读')
             return
         logger.debug(f'正在进行新闻学习...')
+        self._kaleidoscope()
         vol_not_found = True
         while vol_not_found:
             volumns = self.wait.until(EC.presence_of_all_elements_located((By.XPATH, rules['article_volumn'])))

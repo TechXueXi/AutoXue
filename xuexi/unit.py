@@ -53,8 +53,8 @@ class Timer:
 
 
 cfg = ConfigParser()
-cfg.read('./xuexi/default.ini', encoding='utf-8')
-cfg.read('./xuexi/custom.ini', encoding='utf-8')
+cfg.read('./config/default.ini', encoding='utf-8')
+cfg.read('./config/custom.ini', encoding='utf-8')
 
 
 def create_logger(loggername:str='logger', levelname:str='DEBUG', console_levelname='INFO'):
@@ -76,7 +76,8 @@ def create_logger(loggername:str='logger', levelname:str='DEBUG', console_leveln
     handler_console.setFormatter(console_format)
     handler_console.setLevel(levels[console_levelname])
 
-    path = Path(__file__).parent/'logs' # 日志目录
+    # path = Path(__file__).parent/'logs' # 日志目录
+    path = Path(cfg.get('prefers', 'logging_path'))
     path.mkdir(parents=True, exist_ok=True)
     today = time.strftime("%Y-%m-%d")     # 日志文件名
     common_filename = path / f'{today}.log'
