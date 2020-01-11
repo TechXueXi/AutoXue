@@ -176,15 +176,16 @@ class App(Automation):
         username.send_keys(self.username)
         password.send_keys(self.password)
         self.safe_click(rules["login_submit"])
+        time.sleep(8)
         try:
-            # time.sleep(3)
-            confirm = self.wait.until(EC.presence_of_element_located((
-                By.XPATH, rules["login_confirm"]
-            )))
-            confirm.click()
+            home = self.driver.find_element_by_xpath(rules["home_entry"])
+            logger.debug(f'Do not have to click login_confirm button, perfect!')
+            return 
         except NoSuchElementException as e:
-            logger.debug(f'貌似不需要点击同意')
-
+            logger.debug(self.driver.current_activity)
+            logger.debug(f"Not home page, click login_confirm button first!")
+            self.safe_click(rules["login_confirm"])
+        time.sleep(3)
         
     def logout_or_not(self):
         if cfg.getboolean("prefers", "keep_alive"):

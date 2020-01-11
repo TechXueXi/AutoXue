@@ -5,16 +5,18 @@
 
 ## 环境准备[下载](http://49.235.90.76:5000/downloads)
 0. 如果之前添加过环境变量`ADB1.0.40`请确保删除之
-1. 安装JDK，本文使用JDK1.8
-    + 在环境变量中新建JAVA_HOME变量，值为JDK安装路径，如C:\Program Files\Java\jdk1.8.0_05
-    + 新建CLASSPATH变量，值为.;%JAVA_HOME%\lib;%JAVA_HOME%\lib\tools.jar;
-    + Path变量中添加：%JAVA_HOME%\bin和%JAVA_HOME%\jre\bin
-2. 安装SDK，本文使用SDK r24.4.1
-    + 在环境变量中新建ANDROID_HOME，值为SDK安装路径，如C:\Program Files (x86)\Android\android-sdk
-    + 在Path变量中添加项：%ANDROID_HOME%\platform-tools和%ANDROID_HOME%\tools
-3. 安装Appium-desktop，为了使用UiAutomator2，请将Appium设为以管理员权限启动，并赋予JDK和SDK所有权限
+1. 安装`JDK`，本文使用JDK1.8
+    + 在环境变量中新建`JAVA_HOME`变量，值为JDK安装路径，如`C:\Program Files\Java\jdk1.8.0_05`
+    + 新建`CLASSPATH`变量，值为`.;%JAVA_HOME%\lib;%JAVA_HOME%\lib\tools.jar;`
+    + `Path`变量中添加：`%JAVA_HOME%\bin和%JAVA_HOME%\jre\bin`
+2. 安装`SDK`，本文使用SDK r24.4.1
+    + 在环境变量中新建`ANDROID_HOME`，值为SDK安装路径，如`C:\Program Files (x86)\Android\android-sdk`
+    + 在Path变量中添加项：`%ANDROID_HOME%\platform-tools` 和 `%ANDROID_HOME%\tools`
+    + 打开`SDK Manager.exe` 安装对应的工具和包
+
+3. 安装`Appium-desktop`，为了使用`UiAutomator2`，请将`Appium`设为以管理员权限启动，并赋予JDK和SDK所有权限
 4. 安装一个模拟器，就选夜神Nox吧，如用其他模拟器或真机出现问题请自救。
-5. 安装Python，请至少使用3.7+版本，推荐3.8
+5. 安装`Python`，请至少使用3.7+版本，推荐3.8
 
 ## 使用方法(windows)
 0. 克隆项目 `git clone https://github.com/kessil/AutoXue.git --depth 1`
