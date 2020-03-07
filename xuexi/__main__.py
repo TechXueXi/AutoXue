@@ -13,6 +13,7 @@ import time
 from . import App
 from .unit import logger
 from .secureRandom import SecureRandom as random
+import sys
 
 parse = ArgumentParser(description="Accept username and password if necessary!")
 
@@ -32,18 +33,18 @@ def start():
         logger.debug(f'视听学习优先')
         app.watch()
         app.music()
-        shuffle([app.read, app.daily, app.challenge])
+        shuffle([app.read, app.daily, app.challenge, app.weekly])
     else:
         logger.debug(f'视听学习置后')
         app.music()
-        shuffle([app.read, app.daily, app.challenge])
+        shuffle([app.read, app.daily, app.challenge, app.weekly])
         app.watch()
     app.logout_or_not()
     
-    logger.info(f'大功告成，功成身退')
+    sys.exit(0)
 
 def test():
-    app.daily()
+    app.weekly()
     logger.info(f'测试完毕')
 
 if __name__ == "__main__":

@@ -96,7 +96,7 @@ class BankQuery:
             return None
         logger.debug(f'GET {item["content"]}...')
         try:
-            res = requests.get(url=url, headers=self.headers, json=item)
+            res = requests.post(url=url, headers=self.headers, json=item)
             if 200 == res.status_code:
                 logger.debug(f'GET item success')
                 # logger.debug(res.text)
