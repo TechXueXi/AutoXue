@@ -503,36 +503,40 @@ class App(Automation):
         contents = self.wait.until(EC.presence_of_all_elements_located((By.XPATH, rules["daily_blank_content"])))
         # contents = self.find_elements(rules["daily_blank_content"])
         # content = " ".join([x.get_attribute("name") for x in contents])
-        
-        # 针对作妖的UI布局某一版
-        content, spaces = "", []
-        for item in contents:
-            content_text = item.get_attribute("name")
-            if "" != content_text:
-                content += content_text
-            else:
-                length_of_spaces = len(item.find_elements(By.CLASS_NAME, "android.view.View"))-1
-                print(f'空格数 {length_of_spaces}')
-                spaces.append(length_of_spaces)
-                content += " " * (length_of_spaces)
+        logger.debug(f'len of blank contents is {len(contents)}')
+        if 1 < len(contents):
+            # 针对作妖的UI布局某一版            
+            content, spaces = "", []
+            for item in contents:
+                content_text = item.get_attribute("name")
+                if "" != content_text:
+                    content += content_text
+                else:
+                    length_of_spaces = len(item.find_elements(By.CLASS_NAME, "android.view.View"))-1
+                    print(f'空格数 {length_of_spaces}')
+                    spaces.append(length_of_spaces)
+                    content += " " * (length_of_spaces)
 
-        # 针对作妖的UI布局某一版
-        # content, spaces, _spaces = "", [], 0
-        # for item in contents:
-        #     content_text = item.get_attribute("name")
-        #     if "" != content_text:
-        #         content += content_text
-        #         if _spaces:
-        #             spaces.append(_spaces)
-        #             _spaces = 0
-        #     else:
-        #         content += " "
-        #         _spaces += 1
-        # else: # for...else...
-        #     # 如果填空处在最后，需要加一个判断
-        #     if _spaces:
-        #         spaces.append(_spaces)
-        #     logger.debug(f'[填空题] {content} [{" ".join([str(x) for  x in spaces])}]')
+        
+        else:
+            # 针对作妖的UI布局某一版
+            contents = self.wait.until(EC.presence_of_all_elements_located((By.XPATH, rules["daily_blank_container"])))
+            content, spaces, _spaces = "", [], 0
+            for item in contents:
+                content_text = item.get_attribute("name")
+                if "" != content_text:
+                    content += content_text
+                    if _spaces:
+                        spaces.append(_spaces)
+                        _spaces = 0
+                else:
+                    content += " "
+                    _spaces += 1
+            else: # for...else...
+                # 如果填空处在最后，需要加一个判断
+                if _spaces:
+                    spaces.append(_spaces)
+                logger.debug(f'[填空题] {content} [{" ".join([str(x) for  x in spaces])}]')
         
         blank_edits = self.wait.until(EC.presence_of_all_elements_located((By.XPATH, rules["daily_blank_edits"])))
         # blank_edits = self.find_elements(rules["daily_blank_edits"])
