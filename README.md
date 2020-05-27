@@ -1,3 +1,13 @@
+> 这是从https://github.com/kessil/AutoXue 搬运来的项目
+
+现支持挑战答题、每日答题、新闻阅读、视听学习。支持较全，37分/天
+
+缺点：对电脑配置要求较高，且安装运行环境很麻烦。  
+
+**使用更方便但只有25分/天的TechXueXi：https://github.com/TechXueXi/**
+
+如果您现在前往https://github.com/kessil/AutoXue ，请注意使用dev分支。
+
 # 挑战答题
 
 ## 免责申明
