@@ -4,7 +4,7 @@
 
 缺点：对电脑配置要求较高，且安装运行环境很麻烦。  
 
-**使用更方便但只有25分/天的TechXueXi：https://github.com/TechXueXi/**
+**使用更方便可达 46分/天的TechXueXi：https://github.com/TechXueXi/**
 
 如果您现在前往https://github.com/kessil/AutoXue ，请注意使用dev分支。
 
